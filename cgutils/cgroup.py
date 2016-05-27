@@ -6,7 +6,7 @@ import errno
 
 from cgutils import host
 from cgutils import process
-from . import fileops
+from cgutils import fileops
 
 
 if sys.version_info.major == 3:
@@ -573,7 +573,7 @@ class CGroup:
         return self.fullname == obj.fullname and self.subsystem.name == obj.subsystem.name
 
     def apply_filters(self, filters):
-        
+
         _configs = self.configs
         _stats = self.stats
         self.configs = {}
@@ -635,6 +635,7 @@ class CGroup:
 
     def set_config(self, name, value):
         path = os.path.join(self.fullpath, self.subsystem.name + '.' + name)
+        print value
         fileops.write(path, str(value))
 
     def mkdir(self, name, set_initparams=True):

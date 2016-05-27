@@ -19,10 +19,10 @@
 TC=/sbin/tc
 
 # Download limit (in mega bits)
-DNLD=1mbit          # DOWNLOAD Limit
+DNLD=$3          # DOWNLOAD Limit
 
 # Upload limit (in mega bits)
-UPLD=1mbit          # UPLOAD Limit
+UPLD=$4          # UPLOAD Limit
 
 
 start() {

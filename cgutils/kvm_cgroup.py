@@ -9,16 +9,16 @@ class ValOutofRanege(Exception):
 class kvmCgroup(cgroup.CGroup):
     def __init__(self, kvmname, subsystem):
         self.kvmname = kvmname
-        staus = cgroup.SubsystemStatus
-        subsystemPath = staus.paths[subsystem]
+        subsystemPath = cgroup.SubsystemStatus().paths[subsystem]
         fullPath = fileops.find(kvmname, subsystemPath)
-        if not fullPath: 
+        if not fullPath:
             self.cgroup = False
             raise NoSuchKVMError("No such kvm found: " + kvmname)
         else:
             self.cgroup = True
             subsys = cgroup._get_subsystem(subsystem)
-            cgroup.CGroup.__init__(self, subsys, fullPath)   
+            print fullPath
+            cgroup.CGroup.__init__(self, subsys, fullPath)
 
 class kvmCpuLimit(kvmCgroup):
     def __init__(self, kvmname):
@@ -26,24 +26,24 @@ class kvmCpuLimit(kvmCgroup):
     def cpulimit(self, percentage):
         if not self.cgroup:
             raise NoSuchKVMError("No such kvm found: " + self.kvmname)
-        if percentage < 0 or percentage > 100:
-            raise ValOutofRanege("The percentage value out of range:  " + percentage) 
+        if int(percentage) < 0 or int(percentage) > 100:
+            raise ValOutofRanege("The percentage value out of range:  " + percentage)
         self.set_config('cfs_period_us', 100*int(percentage))
     def cpuunset(self):
-        self.set_config('cpus', 10000)
-        
+        self.set_config('cfs_period_us', 10000)
+
 class kvmCpusetLimit(kvmCgroup):
     def __init__(self, kvmname):
-        kvmCgroup.__init__(self, self.kvmname, 'cpuset')
+        kvmCgroup.__init__(self, kvmname, 'cpuset')
     def cpusetlimit(self, cpuset):
         if not self.cgroup:
-            raise NoSuchKVMError("No such kvm found: " + self.kvmname)        
-        params = self.subsystem.get_default_configs()
+            raise NoSuchKVMError("No such kvm found: " + self.kvmname)
+        print cpuset
+        params = self.get_default_configs()
         cpuseq = params['cpus']
-        cpunum = ''
-        while  cpuseq[-1] >= '0' and cpuseq[-1] <= '9':
-            cpunum += cpuseq[-1]
-        cpunum = int(cpunum)
+        print cpuseq
+        cpunum = int(cpuseq.split('-')[1])
+        print cpunum
         if cpunum < 1:
             raise Exception("Cpu number is wrong")
         for cpus in cpuset.split(','):
@@ -55,6 +55,7 @@ class kvmCpusetLimit(kvmCgroup):
             else:
                 if int(cpus) > cpunum:
                     raise Exception("Wrong in cpuset: " + cpuset)
+        print 11111111
         self.set_config('cpus', cpuset)
     def cpusetunset(self):
         if not self.cgroup:
@@ -69,7 +70,7 @@ class kvmMemLimit(kvmCgroup):
     def memlimit(self, memory):
         if not self.cgroup:
             raise NoSuchKVMError("No such kvm found: " + self.kvmname)
-        params = self.subsystem.get_default_configs()
+        params = self.get_default_configs()
         memmax = int(params['limit_in_bytes'])
         memory = int(memory)
         if memory > memmax:
@@ -82,39 +83,39 @@ class kvmMemLimit(kvmCgroup):
 
 class kvmDiskLimit(kvmCgroup):
     def __init__(self, kvmname):
-        kvmCgroup.__init__(self, kvmname, 'blk_io')
+        kvmCgroup.__init__(self, kvmname, 'blkio')
     def diskreadlimit(self, val, devpath='/var'):
         if not self.cgroup:
             raise NoSuchKVMError("No such docker found: " + self.kvmname)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.read_bps', '%d:%d %d' %(major, minor, val))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.read_bps_device', '%d:%d %d' %(major, minor, val))
         return True
     def diskreadunset(self, devpath='/var'):
         if not self.cgroup:
             raise NoSuchKVMError("No such docker found: " + self.kvmname)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.read_bps', '%d:%d 0' %(major, minor))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.read_bps_device', '%d:%d 0' %(major, minor))
         return True
     def diskwritelimit(self, val, devpath='/var'):
         if not self.cgroup:
             raise NoSuchKVMError("No such docker found: " + self.kvmname)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.write_bps', '%d:%d %d' %(major, minor, val))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.write_bps_device', '%d:%d %d' %(major, minor, val))
         return True
     def diskwriteunset(self, devpath='/var'):
         if not self.cgroup:
             raise NoSuchKVMError("No such docker found: " + self.kvmname)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.write_bps', '%d:%d 0' %(major, minor))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.write_bps_device', '%d:%d 0' %(major, minor))
         return True
-    
-        
-        
+
+
+

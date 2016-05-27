@@ -40,10 +40,11 @@ def mkdir(path, mode=0o777):
     os.mkdir(path, mode)
 
 def find(name, subsyspath):
+    print "find %s -name *%s*" % (subsyspath, name)
     ret = commands.getoutput("find %s -name *%s*" % (subsyspath, name))
     if '\n' in ret: return None
     return ret
-    
+
 
 def findException():
     pass

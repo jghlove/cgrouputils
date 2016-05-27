@@ -9,16 +9,15 @@ class ValOutofRanege(Exception):
 class dockerCgroup(cgroup.CGroup):
     def __init__(self, dockerid, subsystem):
         self.dockerid = dockerid
-        staus = cgroup.SubsystemStatus
-        subsystemPath = staus.paths[subsystem]
+        subsystemPath = cgroup.SubsystemStatus().paths[subsystem]
         fullPath = fileops.find(dockerid, subsystemPath)
-        if not fullPath: 
+        if not fullPath:
             self.cgroup = False
             raise NoSuchDockerError("No such docker found: " + dockerid)
         else:
             self.cgroup = True
             subsys = cgroup._get_subsystem(subsystem)
-            cgroup.CGroup.__init__(self, subsys, fullPath)   
+            cgroup.CGroup.__init__(self, subsys, fullPath)
 
 class dockerCpuLimit(dockerCgroup):
     def __init__(self, dockerid):
@@ -26,24 +25,21 @@ class dockerCpuLimit(dockerCgroup):
     def cpulimit(self, percentage):
         if not self.cgroup:
             raise NoSuchDockerError("No such docker found: " + self.dockerid)
-        if percentage < 0 or percentage > 100:
-            raise ValOutofRanege("The percentage value out of range:  " + percentage) 
+        if int(percentage) < 0 or int(percentage) > 100:
+            raise ValOutofRanege("The percentage value out of range:  " + percentage)
         self.set_config('cfs_period_us', 100*int(percentage))
     def cpuunset(self):
-        self.set_config('cpus', 10000)
-        
+        self.set_config('cfs_period_us', 10000)
+
 class dockerCpusetLimit(dockerCgroup):
     def __init__(self, dockerid):
-        dockerCgroup.__init__(self, self.dockerid, 'cpuset')
+        dockerCgroup.__init__(self, dockerid, 'cpuset')
     def cpusetlimit(self, cpuset):
         if not self.cgroup:
-            raise NoSuchDockerError("No such docker found: " + self.dockerid)        
-        params = self.subsystem.get_default_configs()
+            raise NoSuchDockerError("No such docker found: " + self.dockerid)
+        params = self.get_default_configs()
         cpuseq = params['cpus']
-        cpunum = ''
-        while  cpuseq[-1] >= '0' and cpuseq[-1] <= '9':
-            cpunum += cpuseq[-1]
-        cpunum = int(cpunum)
+        cpunum = int(cpuseq.split('-')[1])
         if cpunum < 1:
             raise Exception("Cpu number is wrong")
         for cpus in cpuset.split(','):
@@ -69,7 +65,7 @@ class dockerMemLimit(dockerCgroup):
     def memlimit(self, memory):
         if not self.cgroup:
             raise NoSuchDockerError("No such docker found: " + self.dockerid)
-        params = self.subsystem.get_default_configs()
+        params = self.get_default_configs()
         memmax = int(params['limit_in_bytes'])
         memory = int(memory)
         if memory > memmax:
@@ -82,39 +78,39 @@ class dockerMemLimit(dockerCgroup):
 
 class dockerDiskLimit(dockerCgroup):
     def __init__(self, dockerid):
-        dockerCgroup.__init__(self, dockerid, 'blk_io')
+        dockerCgroup.__init__(self, dockerid, 'blkio')
     def diskreadlimit(self, val, devpath='/var'):
         if not self.cgroup:
             raise NoSuchDockerError("No such docker found: " + self.dockerid)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.read_bps', '%d:%d %d' %(major, minor, val))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.read_bps_device', '%d:%d %d' %(major, minor, val))
         return True
     def diskreadunset(self, devpath='/var'):
         if not self.cgroup:
             raise NoSuchDockerError("No such docker found: " + self.dockerid)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.read_bps', '%d:%d 0' %(major, minor))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.read_bps_device', '%d:%d 0' %(major, minor))
         return True
     def diskwritelimit(self, val, devpath='/var'):
         if not self.cgroup:
             raise NoSuchDockerError("No such docker found: " + self.dockerid)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.write_bps', '%d:%d %d' %(major, minor, val))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.write_bps_device', '%d:%d %d' %(major, minor, val))
         return True
     def diskwriteunset(self, devpath='/var'):
         if not self.cgroup:
             raise NoSuchDockerError("No such docker found: " + self.dockerid)
             return False
-        major = int(os.stat(devpath).st_dev & 0xff)
-        minor = int(os.stat(devpath).st_dev >> 8 & 0xff)
-        self.set_config('throttle.write_bps', '%d:%d 0' %(major, minor))
+        minor = int(os.stat(devpath).st_dev & 0xff)
+        major = int(os.stat(devpath).st_dev >> 8 & 0xff)
+        self.set_config('throttle.write_bps_device', '%d:%d 0' %(major, minor))
         return True
-    
-        
-        
+
+
+
